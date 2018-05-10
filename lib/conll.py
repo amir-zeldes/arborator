@@ -50,8 +50,7 @@ class Tree(dict):
 	def __repr__(self):
 		#dictrepr = dict.__repr__(self)
 		#return '%s(%s)' % (type(self).__name__, dictrepr)
-		return u"\n".join([u"Tree: "+self.sentence(),self.conllu()])
-		#[f+": "+v for f,v in self.sentencefeatures.iteritems()]+[str(i)+u": "+self[i].get("t",u"")+"\t"+str(self[i]) for i in self]).encode("utf-8")
+		return u"\n".join([u"Tree: "+self.sentence()]+[f+": "+v for f,v in self.sentencefeatures.iteritems()]+[str(i)+u": "+self[i].get("t",u"")+"\t"+str(self[i]) for i in self]).encode("utf-8")
 
 	def update(self, *args, **kwargs):
 		#print 'update', args, kwargs
@@ -69,7 +68,7 @@ class Tree(dict):
 			if stftkey=="_comments":
 				treestring+="# "+self.sentencefeatures[stftkey]
 			else:
-				treestring+="# "+stftkey+" = "+self.sentencefeatures[stftkey]+"\n"
+				treestring+="# "+stftkey+" = "+self.sentencefeatures[stftkey]+"\n"	
 		for i in sorted(self.keys()):
 			node = self[i]                        
 			govs=node.get("gov",{})
@@ -84,7 +83,7 @@ class Tree(dict):
 				node.get("lemma",""), 
 				node.get("tag","_"), 
 				node.get("xpos","_"), 
-				"|".join( [ a+"="+v for a,v in node.iteritems() if a not in ["t","lemma","lemma2","tag","tag2","xpos","egov","misc","id","index","gov"] and v!='_']) or "_", 
+				"|".join( [ a+"="+v for a,v in node.iteritems() if a not in ["t","lemma","tag","tag2","xpos","egov","misc","id","index","gov"]])  or "_", 
 				gk,
 				gv,
 				"|".join( [ str(g)+":"+govs.get(g,"_") for g in govk[1:] ]) or "_", 
@@ -121,7 +120,7 @@ def conll2tree(conllstring):
 			cells = line.split('\t')
 			nrCells = len(cells)
 			
-			if nrCells in [4,10,12,14]:
+			if nrCells in [4,10,14]:
 				
 				if nrCells == 4: # malt!
 					t, tag, head, rel = cells
@@ -155,32 +154,7 @@ def conll2tree(conllstring):
 					
 					tree[nr]=update(tree.get(nr,{}), newf)
 					if nr>skipuntil: tree.words+=[t]
-				
-				elif nrCells == 12: # naija
-					nr, t, lemma , tag, xpos, features, head, rel, edeps, misc, startali, endali = cells
-					if "-" in nr: 
-						try:	skipuntil=int(nr.split("-")[-1])
-						except:	skipuntil=float(nr.split("-")[-1])
-						tree.words+=[t]
-						continue
-					try:	nr = int(nr)
-					except:	nr = float(nr) # handling the 3.1 format for "emtpy nodes"
-					if head.strip()=="_": head=-1
-					else:
-						try:	head = int(head)
-						except:	head = float(head)
-					egov={}
-					if ":" in edeps: # the enhanced graph is used
-						egov=dict([(gf.split(":")[0],gf.split(":")[-1]) for gf in edeps.split("|")])					
 					
-					newf={'id':nr,'t': t,'lemma': lemma, 'tag': tag, 'xpos': xpos, 'gov':{head: rel}, 'egov':egov, 'misc': misc, 'startali':startali, 'endali':endali}
-					if "=" in features:
-						mf=dict([(av.split("=")[0],av.split("=")[-1]) for av in features.split("|")])
-						newf=update(mf,newf)
-					
-					tree[nr]=update(tree.get(nr,{}), newf)
-					if nr>skipuntil: tree.words+=[t]
-				
 				elif nrCells == 14:
 					#mate:
 					#6, inscriptions, _, inscription, _, N, _, pl|masc, -1, 4, _, dep, _, _
